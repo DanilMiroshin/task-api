@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Statuses;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -14,10 +15,11 @@ class TaskFactory extends Factory
      *
      * @return array<string, mixed>
      */
-    public function definition()
+    public function definition(): array
     {
         return [
-            //
+            'name' => $this->faker->realText(10),
+            'status' => $this->faker->randomElement(array_column(Statuses::cases(), 'value')),
         ];
     }
 }

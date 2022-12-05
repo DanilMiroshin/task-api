@@ -2,85 +2,64 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreTaskRequest;
-use App\Http\Requests\UpdateTaskRequest;
+use App\Enums\Statuses;
 use App\Models\Task;
+use App\Http\Requests\Tasks\{
+    IndexRequest,
+    StoreRequest,
+    UpdateRequest,
+};
 
 class TaskController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
+    public function index(IndexRequest $request): \Illuminate\Http\JsonResponse
     {
-        //
+        $query = Task::query();
+
+        $page = $request->get('page', Task::DEFAULT_PAGE);
+        $limit = $request->get('limit', Task::DEFAULT_PAGE_SIZE);
+
+        $query->when($request->filled('status'), static function ($query, $request){
+            $query->where('status', Statuses::tryFrom($request->get('status')));
+        });
+
+        $total = $query->count();
+        $tasks = $query
+            ->skip($page * $limit - $limit)
+            ->take($limit)
+            ->get();
+
+        return response()->json([
+            'total_tasks' => $total,
+            'tasks' => $tasks,
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
+    public function store(StoreRequest $request): \Illuminate\Http\JsonResponse
     {
-        //
+        $task = Task::create([
+            'name' => $request->get('name'),
+            'status' => $request->get('status', Statuses::NEW->value)
+        ]);
+
+        return response()->json([
+            'task' => $task,
+        ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \App\Http\Requests\StoreTaskRequest  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(StoreTaskRequest $request)
+    public function update(Task $task, UpdateRequest $request): \Illuminate\Http\JsonResponse
     {
-        //
+        $task->update($request->validated());
+
+        return response()->json([
+           'task' => $task,
+        ]);
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Task  $task
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Task $task)
+    public function destroy(Task $task): \Illuminate\Http\Response
     {
-        //
-    }
+        $task->delete();
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Task  $task
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Task $task)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \App\Http\Requests\UpdateTaskRequest  $request
-     * @param  \App\Models\Task  $task
-     * @return \Illuminate\Http\Response
-     */
-    public function update(UpdateTaskRequest $request, Task $task)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Task  $task
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Task $task)
-    {
-        //
+        return response()->noContent();
     }
 }
